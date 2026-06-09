@@ -12,7 +12,7 @@ const CLIENT_SECRET =
   "605EC49B62A7D31B45E6B281C1217B00120DE13CA5B65BE7FCE50B37851EE219";
 
 const REDIRECT_URI =
-  "http://localhost:3000/callback";
+  "https://validationrulemanager.netlify.app/callback";
 
 const SF_LOGIN_URL =
   "https://login.salesforce.com";
