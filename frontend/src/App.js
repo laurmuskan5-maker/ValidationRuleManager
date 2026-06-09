@@ -13,6 +13,16 @@ function Home() {
   const [accessToken, setAccessToken] = useState(null);
   const [instanceUrl, setInstanceUrl] = useState(null);
 
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    const url = localStorage.getItem("instanceUrl");
+
+    if (token && url) {
+      setAccessToken(token);
+      setInstanceUrl(url);
+    }
+  }, []);
+
   return (
     <div>
       <Navbar />
@@ -59,7 +69,7 @@ function Callback() {
     if (code) exchangeToken();
   }, []);
 
-  return <h3>{loading ? "Logging you in..." : "Login failed"}</h3>;
+  return <h3>Logging you in...</h3>;
 }
 
 /* ---------------- APP ---------------- */
