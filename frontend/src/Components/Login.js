@@ -4,7 +4,7 @@ const CLIENT_ID =
   "3MVG9GCMQoQ6rpzQupJ30eDjeMlRot4r4db1P5_oyuBX2I4hh6GSqvYJ0gnmxn9ck6JzKqViPxZ_.6S0UV.53";
 
 const REDIRECT_URI =
-  "http://localhost:3000/callback";
+  "https://validationrulemanager.netlify.app/callback";
 
 function Login() {
   const handleLogin = () => {

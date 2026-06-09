@@ -1,5 +1,6 @@
 import axios from "axios";
-const API_URL = "http://localhost:5000";
+const API_URL =
+  "https://validationrulemanager.onrender.com";
 export const getValidationRules = async (
   accessToken,
   instanceUrl

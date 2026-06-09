@@ -4,7 +4,8 @@ import axios from "axios";
 import Navbar from "./Components/Navbar";
 import Login from "./Components/Login";
 import ValidationRules from "./Components/ValidationRules";
-const API_URL = "http://localhost:5000";
+const API_URL =
+  "https://validationrulemanager.onrender.com";
 function App() {
   const [accessToken, setAccessToken] = useState(null);
   const [instanceUrl, setInstanceUrl] = useState(null);
