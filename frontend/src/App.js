@@ -23,6 +23,13 @@ function Home() {
     }
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("instanceUrl");
+    setAccessToken(null);
+    setInstanceUrl(null);
+  };
+
   return (
     <div>
       <Navbar />
@@ -30,10 +37,25 @@ function Home() {
       {!accessToken ? (
         <Login />
       ) : (
-        <ValidationRules
-          accessToken={accessToken}
-          instanceUrl={instanceUrl}
-        />
+        <>
+          <button
+            onClick={handleLogout}
+            style={{
+              position: "absolute",
+              right: "20px",
+              top: "10px",
+              padding: "8px 12px",
+              cursor: "pointer",
+            }}
+          >
+            Logout
+          </button>
+
+          <ValidationRules
+            accessToken={accessToken}
+            instanceUrl={instanceUrl}
+          />
+        </>
       )}
     </div>
   );
@@ -54,14 +76,12 @@ function Callback() {
           { code }
         );
 
-        // store tokens (simple version)
         localStorage.setItem("accessToken", response.data.access_token);
         localStorage.setItem("instanceUrl", response.data.instance_url);
 
         window.location.href = "/";
       } catch (err) {
         console.error("OAuth Error:", err);
-      } finally {
         setLoading(false);
       }
     };
