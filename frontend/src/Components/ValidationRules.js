@@ -73,7 +73,7 @@ function ValidationRules({
       await toggleValidationRule(
         accessToken,
         instanceUrl,
-        rule.FullName,
+        rule.rule.ValidationName,
         !rule.Active
       );
 
@@ -202,7 +202,7 @@ function ValidationRules({
                   key={rule.Id}
                 >
                   <td>
-                    {rule.FullName}
+                    {rule.ValidationName}
                   </td>
 
                   <td>
