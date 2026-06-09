@@ -1,108 +1,184 @@
-import React, { useEffect, useState, useCallback } from "react";
-import {
-  getValidationRules,
-  toggleValidationRule,
-} from "../Services/salesforceApi";
+require("dotenv").config();
 
-function ValidationRules({ accessToken, instanceUrl }) {
-  const [rules, setRules] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+const jsforce = require("jsforce");
+const express = require("express");
+const axios = require("axios");
+const cors = require("cors");
 
-  // Fetch rules from backend
-  const fetchRules = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
+const app = express();
 
-      const data = await getValidationRules(accessToken, instanceUrl);
+app.use(cors());
+app.use(express.json());
 
-      console.log("Validation Rules:", data);
+const PORT = process.env.PORT || 5000;
 
-      setRules(data.records || []);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load validation rules.");
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken, instanceUrl]);
-
-  useEffect(() => {
-    if (accessToken && instanceUrl) {
-      fetchRules();
-    }
-  }, [accessToken, instanceUrl, fetchRules]);
-
-  // Toggle rule active/inactive
-  const handleToggle = async (rule) => {
+app.post("/oauth/token", async (req, res) => {
   try {
-    const ruleName = rule.ValidationName;
+    const { code } = req.body;
 
-    await toggleValidationRule(
+    const params = new URLSearchParams();
+
+    params.append("grant_type", "authorization_code");
+    params.append("client_id", process.env.CLIENT_ID);
+    params.append("client_secret", process.env.CLIENT_SECRET);
+    params.append("redirect_uri", process.env.REDIRECT_URI);
+    params.append("code", code);
+
+    const response = await axios.post(
+      `${process.env.SF_LOGIN_URL}/services/oauth2/token`,
+      params,
+      {
+        headers: {
+          "Content-Type":
+            "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error(
+      "OAuth Error:",
+      error.response?.data || error.message
+    );
+
+    res.status(500).json({
+      success: false,
+      error:
+        error.response?.data || error.message,
+    });
+  }
+});
+
+app.post("/validation-rules", async (req, res) => {
+  try {
+    const { accessToken, instanceUrl } = req.body;
+
+    const query = `
+      SELECT Id,
+             ValidationName,
+             Active
+      FROM ValidationRule
+      WHERE EntityDefinition.QualifiedApiName = 'AppointmentInvitation'
+    `;
+
+    const response = await axios.get(
+      `${instanceUrl}/services/data/v60.0/tooling/query`,
+      {
+        params: {
+          q: query,
+        },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    console.log(
+      "Rules Found:",
+      response.data.totalSize
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error(
+      "Validation Rules Error:",
+      error.response?.data || error.message
+    );
+
+    res.status(500).json({
+      success: false,
+      error:
+        error.response?.data || error.message,
+    });
+  }
+});
+
+app.post("/toggle-validation-rule", async (req, res) => {
+  try {
+    const {
       accessToken,
       instanceUrl,
       ruleName,
-      !rule.Active
+      active,
+    } = req.body;
+
+    const conn = new jsforce.Connection({
+      instanceUrl,
+      accessToken,
+    });
+
+    const fullName =
+      `AppointmentInvitation.${ruleName}`;
+
+    console.log(
+      "Reading metadata:",
+      fullName
     );
 
-    setRules((prev) =>
-      prev.map((r) =>
-        r.Id === rule.Id
-          ? { ...r, Active: !r.Active }
-          : r
-      )
+    const metadata =
+      await conn.metadata.read(
+        "ValidationRule",
+        fullName
+      );
+
+    if (!metadata) {
+      return res.status(404).json({
+        success: false,
+        error:
+          "Validation Rule not found",
+      });
+    }
+
+    metadata.active = active;
+
+    console.log(
+      "Updating Rule:",
+      fullName,
+      "Active:",
+      active
     );
+
+    const result =
+      await conn.metadata.update(
+        "ValidationRule",
+        metadata
+      );
+
+    console.log(
+      "Update Result:",
+      result
+    );
+
+    res.json({
+      success: true,
+      result,
+    });
   } catch (error) {
-    console.error("Toggle Error:", error);
-    alert("Failed to update validation rule");
+    console.error(
+      "Metadata Update Error:",
+      error.response?.data ||
+        error.message ||
+        error
+    );
+
+    res.status(500).json({
+      success: false,
+      error:
+        error.message ||
+        "Metadata update failed",
+    });
   }
-};
+});
 
-  return (
-    <div style={{ padding: "20px" }}>
-      <h2>Salesforce Validation Rules</h2>
-
-      <button onClick={fetchRules} style={{ marginBottom: "20px" }}>
-        Refresh Rules
-      </button>
-
-      {loading && <p>Loading...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      <table border="1" width="100%" cellPadding="10">
-        <thead>
-          <tr>
-            <th>Rule Name</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {rules.length === 0 ? (
-            <tr>
-              <td colSpan="3" align="center">
-                No Validation Rules Found
-              </td>
-            </tr>
-          ) : (
-            rules.map((rule) => (
-              <tr key={rule.Id}>
-                <td>{rule.ValidationName}</td>
-                <td>{rule.Active ? "Active" : "Inactive"}</td>
-                <td>
-                  <button onClick={() => handleToggle(rule)}>
-                    {rule.Active ? "Disable" : "Enable"}
-                  </button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+app.get("/", (req, res) => {
+  res.send(
+    "Salesforce Validation Rule API Running"
   );
-}
+});
 
-export default ValidationRules;
+app.listen(PORT, () => {
+  console.log(
+    `Server running on port ${PORT}`
+  );
+});
