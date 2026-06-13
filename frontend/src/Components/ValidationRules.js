@@ -73,7 +73,7 @@ function ValidationRules({
       await toggleValidationRule(
         accessToken,
         instanceUrl,
-        rule.rule.ValidationName,
+        rule.ValidationName,
         !rule.Active
       );
 
